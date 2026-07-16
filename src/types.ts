@@ -3,6 +3,16 @@ export type User = {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  address?: {
+    name?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    state?: string;
+    country?: string;
+  };
+  email_verified?: boolean;
   created_at?: string;
 };
 
@@ -72,6 +82,19 @@ export type Stats = {
   totalOrders: number;
   totalRevenue: number;
   totalProducts: number;
+};
+
+export type CustomerDetails = {
+  customer: User;
+  summary: {
+    totalOrders: number;
+    totalSpent: number;
+    totalDiscount: number;
+    deliveredOrders: number;
+    paidOrders: number;
+    lastOrderAt: string | null;
+  };
+  orders: Array<Omit<Order, 'user_name' | 'user_email'>>;
 };
 
 export type Coupon = {

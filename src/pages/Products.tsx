@@ -1,17 +1,16 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Plus, Star, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Edit, Plus, Star, Trash2, Upload } from 'lucide-react';
 import api from '../api/client';
 import {
+  BrandedSelect,
   dangerIconButtonClass,
   iconButtonClass,
   inputClass,
-  PageSizeSelect,
   Pagination,
   panelClass,
   primaryButtonClass,
   secondaryButtonClass,
-  selectClass,
   SortDirection,
   SortHeader,
   tableClass,
@@ -23,6 +22,7 @@ import { endpoints, ASSET_BASE_URL } from '../config/apiConfig';
 import { Product, ProductImage } from '../types';
 
 const categories = ['plants', 'seeds', 'tools', 'planters', 'other'];
+const categoryOptions = categories.map((category) => ({ value: category, label: category }));
 
 const imageUrl = (product: Product) => {
   const url = product.thumbnail_url || product.image_url;
@@ -30,13 +30,13 @@ const imageUrl = (product: Product) => {
   return url.startsWith('http') ? url : `${ASSET_BASE_URL}${url}`;
 };
 
-function ProductForm({
+function ProductFormPage({
   product,
-  onClose,
+  onCancel,
   onSaved,
 }: {
   product: Product | null;
-  onClose: () => void;
+  onCancel: () => void;
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
@@ -80,7 +80,6 @@ function ProductForm({
       }
       toast.success(product ? 'Product updated' : 'Product added');
       onSaved();
-      onClose();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Unable to save product');
     } finally {
@@ -89,15 +88,19 @@ function ProductForm({
   };
 
   return (
-    <div className="fixed inset-0 z-20 grid place-items-center overflow-y-auto bg-stone-950/55 p-3">
-      <form className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg border border-stone-900/10 bg-white p-5 shadow-2xl" onSubmit={submit}>
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="m-0 text-2xl font-black tracking-tight">{product ? 'Edit product' : 'Add product'}</h2>
-          <button type="button" className={secondaryButtonClass} onClick={onClose}>Close</button>
+    <section className={panelClass}>
+      <form onSubmit={submit}>
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Product setup</p>
+            <h2 className="m-0 text-2xl font-black tracking-tight">{product ? 'Edit product' : 'Add product'}</h2>
+            <p className="mt-1 text-sm font-bold text-stone-500">Use this same page for creating and editing products.</p>
+          </div>
+          <button type="button" className={secondaryButtonClass} onClick={onCancel}><ArrowLeft size={18} /> Back to products</button>
         </div>
         <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="grid gap-2 text-sm font-bold text-stone-600">Name<input className={inputClass} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
-          <label className="grid gap-2 text-sm font-bold text-stone-600">Category<select className={selectClass} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+          <BrandedSelect label="Category" value={form.category} onChange={(value) => setForm({ ...form, category: value })} options={categoryOptions} />
           <label className="grid gap-2 text-sm font-bold text-stone-600">Price<input className={inputClass} value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} type="number" step="0.01" required /></label>
           <label className="grid gap-2 text-sm font-bold text-stone-600">Stock<input className={inputClass} value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} type="number" min="0" required /></label>
           <label className="grid gap-2 text-sm font-bold text-stone-600 md:col-span-2">Description<textarea className={inputClass} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} /></label>
@@ -121,14 +124,14 @@ function ProductForm({
         </div>
         <button className={primaryButtonClass} disabled={saving}>{saving ? 'Saving...' : 'Save product'}</button>
       </form>
-    </div>
+    </section>
   );
 }
 
 export function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<'list' | 'form'>('list');
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [stockFilter, setStockFilter] = useState('all');
@@ -186,31 +189,53 @@ export function Products() {
     setSortDirection('asc');
   };
 
+  if (formMode === 'form') {
+    return (
+      <ProductFormPage
+        product={editingProduct}
+        onCancel={() => setFormMode('list')}
+        onSaved={() => {
+          setFormMode('list');
+          setEditingProduct(null);
+          loadProducts();
+        }}
+      />
+    );
+  }
+
   return (
     <section className={panelClass}>
       <div className="mb-4 flex justify-end">
-        <button className={primaryButtonClass} onClick={() => { setEditingProduct(null); setFormOpen(true); }}>
+        <button className={primaryButtonClass} onClick={() => { setEditingProduct(null); setFormMode('form'); }}>
           <Plus size={18} /> Add product
         </button>
       </div>
       <TableToolbar>
         <input className={inputClass} placeholder="Search products" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
-        <select className={selectClass} value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }}>
-          <option value="all">All categories</option>
-          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-        </select>
-        <select className={selectClass} value={stockFilter} onChange={(event) => { setStockFilter(event.target.value); setPage(1); }}>
-          <option value="all">All stock</option>
-          <option value="available">Available</option>
-          <option value="low">Low stock</option>
-          <option value="out">Out of stock</option>
-        </select>
-        <select className={selectClass} value={featuredFilter} onChange={(event) => { setFeaturedFilter(event.target.value); setPage(1); }}>
-          <option value="all">All visibility</option>
-          <option value="featured">Featured</option>
-          <option value="standard">Not featured</option>
-        </select>
-        <PageSizeSelect value={limit} onChange={(value) => { setLimit(value); setPage(1); }} />
+        <BrandedSelect
+          value={categoryFilter}
+          onChange={(value) => { setCategoryFilter(value); setPage(1); }}
+          options={[{ value: 'all', label: 'All categories' }, ...categoryOptions]}
+        />
+        <BrandedSelect
+          value={stockFilter}
+          onChange={(value) => { setStockFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All stock' },
+            { value: 'available', label: 'Available' },
+            { value: 'low', label: 'Low stock' },
+            { value: 'out', label: 'Out of stock' },
+          ]}
+        />
+        <BrandedSelect
+          value={featuredFilter}
+          onChange={(value) => { setFeaturedFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All visibility' },
+            { value: 'featured', label: 'Featured' },
+            { value: 'standard', label: 'Not featured' },
+          ]}
+        />
       </TableToolbar>
       <div className="overflow-x-auto">
         <table className={tableClass}>
@@ -239,7 +264,7 @@ export function Products() {
                 <td className={tdClass}><button className={product.is_featured ? `${iconButtonClass} bg-amber-100 text-amber-700 hover:bg-amber-500` : iconButtonClass} onClick={() => toggleFeatured(product)}><Star size={16} /></button></td>
                 <td className={tdClass}>
                   <div className="flex gap-2">
-                    <button className={iconButtonClass} onClick={() => { setEditingProduct(product); setFormOpen(true); }}><Edit size={16} /></button>
+                    <button className={iconButtonClass} onClick={() => { setEditingProduct(product); setFormMode('form'); }}><Edit size={16} /></button>
                     <button className={dangerIconButtonClass} onClick={() => deleteProduct(product)}><Trash2 size={16} /></button>
                   </div>
                 </td>
@@ -253,8 +278,7 @@ export function Products() {
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
-      {formOpen && <ProductForm product={editingProduct} onClose={() => setFormOpen(false)} onSaved={loadProducts} />}
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
     </section>
   );
 }

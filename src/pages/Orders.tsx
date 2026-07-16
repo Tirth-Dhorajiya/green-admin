@@ -2,11 +2,12 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Eye, X } from 'lucide-react';
 import api from '../api/client';
-import { iconButtonClass, inputClass, PageSizeSelect, Pagination, panelClass, secondaryButtonClass, selectClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
+import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { Order } from '../types';
 
 const orderStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+const orderStatusOptions = orderStatuses.map((status) => ({ value: status, label: status }));
 
 const money = (value: string | number | undefined) => `Rs. ${Number(value || 0).toFixed(2)}`;
 const dateTime = (value: string | undefined) => value ? new Date(value).toLocaleString() : '-';
@@ -120,9 +121,7 @@ function OrderDetailsModal({
 
               <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
                 <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Status control</h3>
-                <select className={selectClass} value={order.status} onChange={(event) => onStatusChange(order.id, event.target.value)}>
-                  {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-                </select>
+                <BrandedSelect value={order.status} onChange={(value) => onStatusChange(order.id, value)} options={orderStatusOptions} />
               </div>
             </div>
           </section>
@@ -210,22 +209,30 @@ export function Orders() {
     <section className={panelClass}>
       <TableToolbar>
         <input className={inputClass} placeholder="Search orders" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
-        <select className={selectClass} value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
-          <option value="all">All statuses</option>
-          {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-        </select>
-        <select className={selectClass} value={paymentFilter} onChange={(event) => { setPaymentFilter(event.target.value); setPage(1); }}>
-          <option value="all">All payments</option>
-          <option value="pending">pending</option>
-          <option value="paid">paid</option>
-          <option value="failed">failed</option>
-        </select>
-        <select className={selectClass} value={couponFilter} onChange={(event) => { setCouponFilter(event.target.value); setPage(1); }}>
-          <option value="all">All coupons</option>
-          <option value="with">With coupon</option>
-          <option value="without">No coupon</option>
-        </select>
-        <PageSizeSelect value={limit} onChange={(value) => { setLimit(value); setPage(1); }} />
+        <BrandedSelect
+          value={statusFilter}
+          onChange={(value) => { setStatusFilter(value); setPage(1); }}
+          options={[{ value: 'all', label: 'All statuses' }, ...orderStatusOptions]}
+        />
+        <BrandedSelect
+          value={paymentFilter}
+          onChange={(value) => { setPaymentFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All payments' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'paid', label: 'Paid' },
+            { value: 'failed', label: 'Failed' },
+          ]}
+        />
+        <BrandedSelect
+          value={couponFilter}
+          onChange={(value) => { setCouponFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All coupons' },
+            { value: 'with', label: 'With coupon' },
+            { value: 'without', label: 'No coupon' },
+          ]}
+        />
       </TableToolbar>
       <div className="overflow-x-auto">
         <table className={tableClass}>
@@ -260,9 +267,7 @@ export function Orders() {
                   </td>
                   <td className={tdClass}>{order.coupon_code ? `${order.coupon_code} (-Rs. ${parseFloat(order.discount_amount || '0').toFixed(2)})` : '-'}</td>
                   <td className={tdClass}>
-                    <select className={selectClass} value={order.status} onChange={(event) => updateStatus(order.id, event.target.value)}>
-                      {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-                    </select>
+                    <BrandedSelect value={order.status} onChange={(value) => updateStatus(order.id, value)} options={orderStatusOptions} />
                   </td>
                   <td className={tdClass}>
                     <button className={iconButtonClass} title="View order details" onClick={() => setExpandedOrderId(order.id)}>
@@ -280,7 +285,7 @@ export function Orders() {
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
       {expandedOrderId && (
         <OrderDetailsModal
           order={orders.find((order) => order.id === expandedOrderId)!}

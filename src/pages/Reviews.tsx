@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../api/client';
-import { inputClass, PageSizeSelect, Pagination, panelClass, selectClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass } from '../components/TableTools';
+import { BrandedSelect, inputClass, Pagination, panelClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { Review } from '../types';
 
@@ -56,16 +56,23 @@ export function Reviews() {
     <section className={panelClass}>
       <TableToolbar>
         <input className={inputClass} placeholder="Search reviews" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
-        <select className={selectClass} value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
-          <option value="all">All statuses</option>
-          <option value="visible">Visible</option>
-          <option value="hidden">Hidden</option>
-        </select>
-        <select className={selectClass} value={ratingFilter} onChange={(event) => { setRatingFilter(event.target.value); setPage(1); }}>
-          <option value="all">All ratings</option>
-          {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}
-        </select>
-        <PageSizeSelect value={limit} onChange={(value) => { setLimit(value); setPage(1); }} />
+        <BrandedSelect
+          value={statusFilter}
+          onChange={(value) => { setStatusFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'visible', label: 'Visible' },
+            { value: 'hidden', label: 'Hidden' },
+          ]}
+        />
+        <BrandedSelect
+          value={ratingFilter}
+          onChange={(value) => { setRatingFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All ratings' },
+            ...[5, 4, 3, 2, 1].map((rating) => ({ value: String(rating), label: `${rating} stars` })),
+          ]}
+        />
       </TableToolbar>
       <div className="overflow-x-auto">
         <table className={tableClass}>
@@ -89,10 +96,14 @@ export function Reviews() {
                 <td className={tdClass}>{review.rating}/5</td>
                 <td className={`${tdClass} max-w-sm whitespace-normal`}>{review.comment || '-'}</td>
                 <td className={tdClass}>
-                  <select className={selectClass} value={review.status} onChange={(event) => updateReviewStatus(review.id, event.target.value as Review['status'])}>
-                    <option value="visible">visible</option>
-                    <option value="hidden">hidden</option>
-                  </select>
+                  <BrandedSelect
+                    value={review.status}
+                    onChange={(value) => updateReviewStatus(review.id, value as Review['status'])}
+                    options={[
+                      { value: 'visible', label: 'Visible' },
+                      { value: 'hidden', label: 'Hidden' },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}
@@ -104,7 +115,7 @@ export function Reviews() {
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
     </section>
   );
 }

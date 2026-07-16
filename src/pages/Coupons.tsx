@@ -1,8 +1,8 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Edit, Save, X } from 'lucide-react';
+import { ArrowLeft, Edit, Plus, Save } from 'lucide-react';
 import api from '../api/client';
-import { iconButtonClass, inputClass, PageSizeSelect, Pagination, panelClass, primaryButtonClass, secondaryButtonClass, selectClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
+import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, primaryButtonClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { Coupon } from '../types';
 
@@ -18,11 +18,100 @@ const emptyForm = {
   is_active: true,
 };
 
+const discountTypeOptions = [
+  { value: 'percent', label: 'Percent' },
+  { value: 'fixed', label: 'Fixed' },
+];
+
+function getInitialForm(coupon: Coupon | null) {
+  if (!coupon) return emptyForm;
+
+  return {
+    code: coupon.code,
+    description: coupon.description || '',
+    discount_type: coupon.discount_type,
+    discount_value: String(coupon.discount_value),
+    min_order_amount: String(coupon.min_order_amount || '0'),
+    max_discount_amount: coupon.max_discount_amount ? String(coupon.max_discount_amount) : '',
+    usage_limit: coupon.usage_limit ? String(coupon.usage_limit) : '',
+    expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 10) : '',
+    is_active: coupon.is_active,
+  };
+}
+
+function CouponFormPage({
+  coupon,
+  onCancel,
+  onSaved,
+}: {
+  coupon: Coupon | null;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState(getInitialForm(coupon));
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const payload = {
+      ...form,
+      code: form.code.toUpperCase(),
+      max_discount_amount: form.max_discount_amount || null,
+      usage_limit: form.usage_limit || null,
+      expires_at: form.expires_at || null,
+    };
+
+    try {
+      setSaving(true);
+      if (coupon) {
+        await api.put(endpoints.admin.coupon(coupon.id), payload);
+        toast.success('Coupon updated');
+      } else {
+        await api.post(endpoints.admin.coupons, payload);
+        toast.success('Coupon created');
+      }
+      onSaved();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to save coupon');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={panelClass}>
+      <form onSubmit={submit}>
+        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Coupon setup</p>
+            <h2 className="m-0 text-2xl font-black tracking-tight">{coupon ? 'Edit coupon' : 'Add coupon'}</h2>
+            <p className="mt-1 text-sm font-bold text-stone-500">Use this same page for creating and editing coupons.</p>
+          </div>
+          <button type="button" className={secondaryButtonClass} onClick={onCancel}><ArrowLeft size={18} /> Back to coupons</button>
+        </div>
+
+        <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Code<input className={inputClass} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })} required /></label>
+          <BrandedSelect label="Type" value={form.discount_type} onChange={(value) => setForm({ ...form, discount_type: value as Coupon['discount_type'] })} options={discountTypeOptions} />
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Discount<input className={inputClass} type="number" min="0.01" step="0.01" value={form.discount_value} onChange={(event) => setForm({ ...form, discount_value: event.target.value })} required /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Minimum order<input className={inputClass} type="number" min="0" step="0.01" value={form.min_order_amount} onChange={(event) => setForm({ ...form, min_order_amount: event.target.value })} /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Max discount<input className={inputClass} type="number" min="0" step="0.01" value={form.max_discount_amount} onChange={(event) => setForm({ ...form, max_discount_amount: event.target.value })} /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Usage limit<input className={inputClass} type="number" min="1" value={form.usage_limit} onChange={(event) => setForm({ ...form, usage_limit: event.target.value })} /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Expires<input className={inputClass} type="date" value={form.expires_at} onChange={(event) => setForm({ ...form, expires_at: event.target.value })} /></label>
+          <label className="flex items-center gap-2 self-end text-sm font-bold text-stone-600"><input className="h-4 w-4 accent-emerald-700" type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Active coupon</label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600 md:col-span-2">Description<textarea className={inputClass} rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
+        </div>
+
+        <button className={primaryButtonClass} disabled={saving}><Save size={18} /> {saving ? 'Saving...' : coupon ? 'Update coupon' : 'Create coupon'}</button>
+      </form>
+    </section>
+  );
+}
+
 export function Coupons() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
+  const [formMode, setFormMode] = useState<'list' | 'form'>('list');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -53,54 +142,6 @@ export function Coupons() {
     loadCoupons();
   }, [loadCoupons]);
 
-  const startEdit = (coupon: Coupon) => {
-    setEditingCoupon(coupon);
-    setForm({
-      code: coupon.code,
-      description: coupon.description || '',
-      discount_type: coupon.discount_type,
-      discount_value: String(coupon.discount_value),
-      min_order_amount: String(coupon.min_order_amount || '0'),
-      max_discount_amount: coupon.max_discount_amount ? String(coupon.max_discount_amount) : '',
-      usage_limit: coupon.usage_limit ? String(coupon.usage_limit) : '',
-      expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 10) : '',
-      is_active: coupon.is_active,
-    });
-  };
-
-  const resetForm = () => {
-    setEditingCoupon(null);
-    setForm(emptyForm);
-  };
-
-  const payload = {
-    ...form,
-    code: form.code.toUpperCase(),
-    max_discount_amount: form.max_discount_amount || null,
-    usage_limit: form.usage_limit || null,
-    expires_at: form.expires_at || null,
-  };
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    try {
-      setSaving(true);
-      if (editingCoupon) {
-        await api.put(endpoints.admin.coupon(editingCoupon.id), payload);
-        toast.success('Coupon updated');
-      } else {
-        await api.post(endpoints.admin.coupons, payload);
-        toast.success('Coupon created');
-      }
-      resetForm();
-      loadCoupons();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Unable to save coupon');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const toggleActive = async (coupon: Coupon) => {
     await api.put(endpoints.admin.coupon(coupon.id), { is_active: !coupon.is_active });
     toast.success(coupon.is_active ? 'Coupon disabled' : 'Coupon enabled');
@@ -116,37 +157,47 @@ export function Coupons() {
     setSortDirection('asc');
   };
 
+  if (formMode === 'form') {
+    return (
+      <CouponFormPage
+        coupon={editingCoupon}
+        onCancel={() => setFormMode('list')}
+        onSaved={() => {
+          setFormMode('list');
+          setEditingCoupon(null);
+          loadCoupons();
+        }}
+      />
+    );
+  }
+
   return (
     <section className={panelClass}>
-      <form className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={submit}>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Code<input className={inputClass} value={form.code} onChange={(event) => setForm({ ...form, code: event.target.value.toUpperCase() })} required /></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Type<select className={selectClass} value={form.discount_type} onChange={(event) => setForm({ ...form, discount_type: event.target.value as Coupon['discount_type'] })}><option value="percent">Percent</option><option value="fixed">Fixed</option></select></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Discount<input className={inputClass} type="number" min="0.01" step="0.01" value={form.discount_value} onChange={(event) => setForm({ ...form, discount_value: event.target.value })} required /></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Minimum order<input className={inputClass} type="number" min="0" step="0.01" value={form.min_order_amount} onChange={(event) => setForm({ ...form, min_order_amount: event.target.value })} /></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Max discount<input className={inputClass} type="number" min="0" step="0.01" value={form.max_discount_amount} onChange={(event) => setForm({ ...form, max_discount_amount: event.target.value })} /></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Usage limit<input className={inputClass} type="number" min="1" value={form.usage_limit} onChange={(event) => setForm({ ...form, usage_limit: event.target.value })} /></label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600">Expires<input className={inputClass} type="date" value={form.expires_at} onChange={(event) => setForm({ ...form, expires_at: event.target.value })} /></label>
-        <label className="flex items-center gap-2 text-sm font-bold text-stone-600"><input className="h-4 w-4 accent-emerald-700" type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Active coupon</label>
-        <label className="grid gap-2 text-sm font-bold text-stone-600 md:col-span-2">Description<textarea className={inputClass} rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></label>
-        <div className="flex flex-wrap gap-2 md:col-span-2">
-          <button className={primaryButtonClass} disabled={saving}><Save size={18} /> {editingCoupon ? 'Update coupon' : 'Create coupon'}</button>
-          {editingCoupon && <button type="button" className={secondaryButtonClass} onClick={resetForm}><X size={18} /> Cancel edit</button>}
-        </div>
-      </form>
+      <div className="mb-4 flex justify-end">
+        <button className={primaryButtonClass} onClick={() => { setEditingCoupon(null); setFormMode('form'); }}>
+          <Plus size={18} /> Add coupon
+        </button>
+      </div>
 
       <TableToolbar>
         <input className={inputClass} placeholder="Search coupons" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
-        <select className={selectClass} value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
-          <option value="all">All statuses</option>
-          <option value="active">Active</option>
-          <option value="disabled">Disabled</option>
-        </select>
-        <select className={selectClass} value={typeFilter} onChange={(event) => { setTypeFilter(event.target.value); setPage(1); }}>
-          <option value="all">All types</option>
-          <option value="percent">Percent</option>
-          <option value="fixed">Fixed</option>
-        </select>
-        <PageSizeSelect value={limit} onChange={(value) => { setLimit(value); setPage(1); }} />
+        <BrandedSelect
+          value={statusFilter}
+          onChange={(value) => { setStatusFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All statuses' },
+            { value: 'active', label: 'Active' },
+            { value: 'disabled', label: 'Disabled' },
+          ]}
+        />
+        <BrandedSelect
+          value={typeFilter}
+          onChange={(value) => { setTypeFilter(value); setPage(1); }}
+          options={[
+            { value: 'all', label: 'All types' },
+            ...discountTypeOptions,
+          ]}
+        />
       </TableToolbar>
 
       <div className="overflow-x-auto">
@@ -171,7 +222,7 @@ export function Coupons() {
                 <td className={tdClass}>{coupon.used_count}{coupon.usage_limit ? ` / ${coupon.usage_limit}` : ''}</td>
                 <td className={tdClass}><button className={`rounded-lg px-2 py-1 text-xs font-extrabold ${coupon.is_active ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`} onClick={() => toggleActive(coupon)}>{coupon.is_active ? 'Active' : 'Disabled'}</button></td>
                 <td className={tdClass}>{coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : '-'}</td>
-                <td className={tdClass}><button className={iconButtonClass} onClick={() => startEdit(coupon)}><Edit size={16} /></button></td>
+                <td className={tdClass}><button className={iconButtonClass} onClick={() => { setEditingCoupon(coupon); setFormMode('form'); }}><Edit size={16} /></button></td>
               </tr>
             ))}
             {!coupons.length && (
@@ -182,7 +233,7 @@ export function Coupons() {
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
     </section>
   );
 }
