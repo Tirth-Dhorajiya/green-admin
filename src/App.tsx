@@ -11,14 +11,14 @@ import { Products } from './pages/Products';
 import { Reviews } from './pages/Reviews';
 import { Settings } from './pages/Settings';
 
-function ActivePage({ view }: { view: AdminView }) {
+function ActivePage({ view, onViewChange }: { view: AdminView; onViewChange: (view: AdminView) => void }) {
   if (view === 'products') return <Products />;
   if (view === 'orders') return <Orders />;
   if (view === 'customers') return <Customers />;
   if (view === 'reviews') return <Reviews />;
   if (view === 'coupons') return <Coupons />;
   if (view === 'settings') return <Settings />;
-  return <Dashboard />;
+  return <Dashboard onViewChange={onViewChange} />;
 }
 
 export default function App() {
@@ -26,7 +26,7 @@ export default function App() {
   const [activeView, setActiveView] = useState<AdminView>('dashboard');
 
   if (loading) {
-    return <div className="loading">Loading...</div>;
+    return <div className="grid min-h-screen place-items-center bg-stone-50 p-6 text-sm font-extrabold text-stone-500">Loading...</div>;
   }
 
   return (
@@ -34,7 +34,7 @@ export default function App() {
       <Toaster position="top-right" />
       {user ? (
         <Layout activeView={activeView} onViewChange={setActiveView}>
-          <ActivePage view={activeView} />
+          <ActivePage view={activeView} onViewChange={setActiveView} />
         </Layout>
       ) : (
         <LoginForm />

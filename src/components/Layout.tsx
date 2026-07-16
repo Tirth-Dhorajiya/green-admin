@@ -25,30 +25,34 @@ export function Layout({
   const { user, logout } = useAuth();
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(6,78,59,0.12),transparent_32rem)] text-stone-900 lg:grid lg:grid-cols-[272px_1fr]">
+      <aside className="border-r border-white/10 bg-gradient-to-b from-emerald-950 to-stone-900 p-4 text-emerald-50 lg:p-6">
+        <div className="mb-4 flex items-center gap-2 px-2 font-black tracking-tight lg:mb-7">
           <Star size={24} />
           <span>Green Admin</span>
         </div>
-        <nav className="nav">
+        <nav className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0">
           {navItems.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={activeView === id ? 'nav-item active' : 'nav-item'} onClick={() => onViewChange(id)}>
+            <button
+              key={id}
+              className={`flex min-w-28 flex-none items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-extrabold transition lg:w-full lg:justify-start ${activeView === id ? 'bg-emerald-500/20 text-white' : 'text-emerald-50/75 hover:bg-emerald-500/15 hover:text-white'}`}
+              onClick={() => onViewChange(id)}
+            >
               <Icon size={18} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
       </aside>
-      <main className="main">
-        <header className="topbar">
+      <main className="min-w-0 p-4 lg:p-8">
+        <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="eyebrow">Admin workspace</p>
-            <h1>{navItems.find((item) => item.id === activeView)?.label}</h1>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Admin workspace</p>
+            <h1 className="m-0 text-3xl font-black tracking-tight text-stone-900 lg:text-4xl">{navItems.find((item) => item.id === activeView)?.label}</h1>
           </div>
-          <div className="account">
+          <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-500 lg:justify-end">
             <span>{user?.name}</span>
-            <button className="secondary-button" onClick={logout}>Logout</button>
+            <button className="rounded-lg bg-emerald-500/10 px-4 py-2.5 font-extrabold text-emerald-950 transition hover:bg-emerald-500/20" onClick={logout}>Logout</button>
           </div>
         </header>
         {children}

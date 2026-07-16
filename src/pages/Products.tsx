@@ -1,7 +1,24 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Edit, Plus, Star, Trash2, Upload } from 'lucide-react';
 import api from '../api/client';
+import {
+  dangerIconButtonClass,
+  iconButtonClass,
+  inputClass,
+  PageSizeSelect,
+  Pagination,
+  panelClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+  selectClass,
+  SortDirection,
+  SortHeader,
+  tableClass,
+  TableToolbar,
+  tdClass,
+  thClass,
+} from '../components/TableTools';
 import { endpoints, ASSET_BASE_URL } from '../config/apiConfig';
 import { Product, ProductImage } from '../types';
 
@@ -72,37 +89,37 @@ function ProductForm({
   };
 
   return (
-    <div className="modal-backdrop">
-      <form className="modal" onSubmit={submit}>
-        <div className="modal-header">
-          <h2>{product ? 'Edit product' : 'Add product'}</h2>
-          <button type="button" className="secondary-button" onClick={onClose}>Close</button>
+    <div className="fixed inset-0 z-20 grid place-items-center overflow-y-auto bg-stone-950/55 p-3">
+      <form className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-lg border border-stone-900/10 bg-white p-5 shadow-2xl" onSubmit={submit}>
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="m-0 text-2xl font-black tracking-tight">{product ? 'Edit product' : 'Add product'}</h2>
+          <button type="button" className={secondaryButtonClass} onClick={onClose}>Close</button>
         </div>
-        <div className="form-grid">
-          <label>Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
-          <label>Category<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
-          <label>Price<input value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} type="number" step="0.01" required /></label>
-          <label>Stock<input value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} type="number" min="0" required /></label>
-          <label className="full">Description<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} /></label>
-          <label className="checkbox-row"><input type="checkbox" checked={form.is_featured} onChange={(event) => setForm({ ...form, is_featured: event.target.checked })} /> Featured product</label>
-          <label className="file-input full">
+        <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Name<input className={inputClass} value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Category<select className={selectClass} value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Price<input className={inputClass} value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} type="number" step="0.01" required /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600">Stock<input className={inputClass} value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} type="number" min="0" required /></label>
+          <label className="grid gap-2 text-sm font-bold text-stone-600 md:col-span-2">Description<textarea className={inputClass} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} rows={4} /></label>
+          <label className="flex items-center gap-2 text-sm font-bold text-stone-600"><input className="h-4 w-4 accent-emerald-700" type="checkbox" checked={form.is_featured} onChange={(event) => setForm({ ...form, is_featured: event.target.checked })} /> Featured product</label>
+          <label className="flex items-center gap-3 rounded-lg border border-dashed border-emerald-500/40 bg-emerald-500/5 p-4 text-sm font-extrabold text-emerald-950 md:col-span-2">
             <Upload size={18} />
             Upload photos
-            <input type="file" accept="image/*" multiple onChange={(event) => setFiles(Array.from(event.target.files || []).slice(0, 10))} />
+            <input className="hidden" type="file" accept="image/*" multiple onChange={(event) => setFiles(Array.from(event.target.files || []).slice(0, 10))} />
           </label>
           {files.length > 0 && (
-            <div className="image-options full">
+            <div className="grid gap-2 md:col-span-2">
               {files.map((file, index) => (
-                <div key={`${file.name}-${index}`}>
-                  <span>{file.name}</span>
-                  <button type="button" className={defaultIndex === index ? 'chip active' : 'chip'} onClick={() => setDefaultIndex(index)}>Default</button>
-                  <button type="button" className={thumbnailIndex === index ? 'chip active' : 'chip'} onClick={() => setThumbnailIndex(index)}>Thumb</button>
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-stone-900/10 p-2" key={`${file.name}-${index}`}>
+                  <span className="truncate text-sm font-bold text-stone-500">{file.name}</span>
+                  <button type="button" className={`rounded-lg px-2 py-1 text-xs font-extrabold ${defaultIndex === index ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`} onClick={() => setDefaultIndex(index)}>Default</button>
+                  <button type="button" className={`rounded-lg px-2 py-1 text-xs font-extrabold ${thumbnailIndex === index ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`} onClick={() => setThumbnailIndex(index)}>Thumb</button>
                 </div>
               ))}
             </div>
           )}
         </div>
-        <button className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Save product'}</button>
+        <button className={primaryButtonClass} disabled={saving}>{saving ? 'Saving...' : 'Save product'}</button>
       </form>
     </div>
   );
@@ -112,15 +129,40 @@ export function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [stockFilter, setStockFilter] = useState('all');
+  const [featuredFilter, setFeaturedFilter] = useState('all');
+  const [sortKey, setSortKey] = useState<'name' | 'category' | 'price' | 'stock' | 'featured'>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const loadProducts = async () => {
-    const res = await api.get(`${endpoints.products.list}?limit=100`);
+  const loadProducts = useCallback(async () => {
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+      sortBy: sortKey === 'featured' ? 'is_featured' : sortKey,
+      order: sortDirection,
+    });
+    if (query) params.set('search', query);
+    if (categoryFilter !== 'all') params.set('category', categoryFilter);
+    if (featuredFilter !== 'all') params.set('featured', featuredFilter === 'featured' ? 'true' : 'false');
+    if (stockFilter === 'available') params.set('stockStatus', 'in_stock');
+    if (stockFilter === 'low') params.set('stockStatus', 'low_stock');
+    if (stockFilter === 'out') params.set('stockStatus', 'out_of_stock');
+
+    const res = await api.get(`${endpoints.products.list}?${params.toString()}`);
     setProducts(res.data.products);
-  };
+    setTotalCount(res.data.totalCount || 0);
+    setTotalPages(res.data.totalPages || 1);
+  }, [page, limit, sortKey, sortDirection, query, categoryFilter, stockFilter, featuredFilter]);
 
   useEffect(() => {
     loadProducts();
-  }, []);
+  }, [loadProducts]);
 
   const toggleFeatured = async (product: Product) => {
     await api.put(endpoints.products.featuredStatus(product.id), { is_featured: !product.is_featured });
@@ -135,49 +177,83 @@ export function Products() {
     loadProducts();
   };
 
+  const updateSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+    setSortKey(key);
+    setSortDirection('asc');
+  };
+
   return (
-    <section className="panel">
-      <div className="panel-actions">
-        <button className="primary-button" onClick={() => { setEditingProduct(null); setFormOpen(true); }}>
+    <section className={panelClass}>
+      <div className="mb-4 flex justify-end">
+        <button className={primaryButtonClass} onClick={() => { setEditingProduct(null); setFormOpen(true); }}>
           <Plus size={18} /> Add product
         </button>
       </div>
-      <div className="table-wrap">
-        <table>
+      <TableToolbar>
+        <input className={inputClass} placeholder="Search products" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
+        <select className={selectClass} value={categoryFilter} onChange={(event) => { setCategoryFilter(event.target.value); setPage(1); }}>
+          <option value="all">All categories</option>
+          {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+        </select>
+        <select className={selectClass} value={stockFilter} onChange={(event) => { setStockFilter(event.target.value); setPage(1); }}>
+          <option value="all">All stock</option>
+          <option value="available">Available</option>
+          <option value="low">Low stock</option>
+          <option value="out">Out of stock</option>
+        </select>
+        <select className={selectClass} value={featuredFilter} onChange={(event) => { setFeaturedFilter(event.target.value); setPage(1); }}>
+          <option value="all">All visibility</option>
+          <option value="featured">Featured</option>
+          <option value="standard">Not featured</option>
+        </select>
+        <PageSizeSelect value={limit} onChange={(value) => { setLimit(value); setPage(1); }} />
+      </TableToolbar>
+      <div className="overflow-x-auto">
+        <table className={tableClass}>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Featured</th>
-              <th>Actions</th>
+              <SortHeader label="Product" active={sortKey === 'name'} direction={sortDirection} onSort={() => updateSort('name')} />
+              <SortHeader label="Category" active={sortKey === 'category'} direction={sortDirection} onSort={() => updateSort('category')} />
+              <SortHeader label="Price" active={sortKey === 'price'} direction={sortDirection} onSort={() => updateSort('price')} />
+              <SortHeader label="Stock" active={sortKey === 'stock'} direction={sortDirection} onSort={() => updateSort('stock')} />
+              <SortHeader label="Featured" active={sortKey === 'featured'} direction={sortDirection} onSort={() => updateSort('featured')} />
+              <th className={thClass}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {products.map((product) => (
               <tr key={product.id}>
-                <td>
-                  <div className="product-cell">
-                    <img src={imageUrl(product)} alt={product.name} />
+                <td className={tdClass}>
+                  <div className="flex min-w-56 items-center gap-3">
+                    <img className="h-12 w-12 rounded-lg object-cover" src={imageUrl(product)} alt={product.name} />
                     <strong>{product.name}</strong>
                   </div>
                 </td>
-                <td>{product.category}</td>
-                <td>Rs. {parseFloat(product.price).toFixed(2)}</td>
-                <td>{product.stock}</td>
-                <td><button className={product.is_featured ? 'icon-button active' : 'icon-button'} onClick={() => toggleFeatured(product)}><Star size={16} /></button></td>
-                <td>
-                  <div className="row-actions">
-                    <button className="icon-button" onClick={() => { setEditingProduct(product); setFormOpen(true); }}><Edit size={16} /></button>
-                    <button className="icon-button danger" onClick={() => deleteProduct(product)}><Trash2 size={16} /></button>
+                <td className={tdClass}>{product.category}</td>
+                <td className={tdClass}>Rs. {parseFloat(product.price).toFixed(2)}</td>
+                <td className={tdClass}>{product.stock}</td>
+                <td className={tdClass}><button className={product.is_featured ? `${iconButtonClass} bg-amber-100 text-amber-700 hover:bg-amber-500` : iconButtonClass} onClick={() => toggleFeatured(product)}><Star size={16} /></button></td>
+                <td className={tdClass}>
+                  <div className="flex gap-2">
+                    <button className={iconButtonClass} onClick={() => { setEditingProduct(product); setFormOpen(true); }}><Edit size={16} /></button>
+                    <button className={dangerIconButtonClass} onClick={() => deleteProduct(product)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
             ))}
+            {!products.length && (
+              <tr>
+                <td colSpan={6} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No products match the current filters.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
       {formOpen && <ProductForm product={editingProduct} onClose={() => setFormOpen(false)} onSaved={loadProducts} />}
     </section>
   );
