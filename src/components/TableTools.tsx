@@ -13,10 +13,10 @@ export const panelClass = 'rounded-lg border border-stone-900/10 bg-white p-5 sh
 export const tableClass = 'w-full min-w-[760px] border-collapse';
 export const thClass = 'border-b border-stone-900/10 bg-emerald-500/5 p-3.5 text-left align-middle';
 export const tdClass = 'border-b border-stone-900/10 p-3.5 align-middle';
-export const iconButtonClass = 'inline-grid h-9 w-9 place-items-center rounded-lg bg-emerald-500/10 text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:text-white';
-export const dangerIconButtonClass = 'inline-grid h-9 w-9 place-items-center rounded-lg bg-red-100 text-red-700 transition hover:-translate-y-0.5 hover:bg-red-600 hover:text-white';
-export const primaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-700/20 transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60';
-export const secondaryButtonClass = 'inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-2.5 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50';
+export const iconButtonClass = 'inline-grid h-9 w-9 cursor-pointer place-items-center rounded-lg bg-emerald-500/10 text-emerald-950 transition hover:-translate-y-0.5 hover:bg-emerald-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+export const dangerIconButtonClass = 'inline-grid h-9 w-9 cursor-pointer place-items-center rounded-lg bg-red-100 text-red-700 transition hover:-translate-y-0.5 hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+export const primaryButtonClass = 'inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-emerald-700/20 transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60';
+export const secondaryButtonClass = 'inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-2.5 text-sm font-extrabold text-emerald-950 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function BrandedSelect({
   value,
@@ -72,7 +72,7 @@ export function BrandedSelect({
       <button
         ref={buttonRef}
         type="button"
-        className="flex h-11 w-full items-center justify-between gap-3 rounded-lg border border-stone-900/10 bg-white px-3 text-left text-sm font-extrabold text-stone-900 outline-none transition hover:border-emerald-500/50 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+        className="flex h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-lg border border-stone-900/10 bg-white px-3 text-left text-sm font-extrabold text-stone-900 outline-none transition hover:border-emerald-500/50 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -96,7 +96,7 @@ export function BrandedSelect({
                 type="button"
                 role="option"
                 aria-selected={active}
-                className={`flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-extrabold transition ${active ? 'bg-emerald-700 text-white' : 'text-stone-700 hover:bg-emerald-500/10 hover:text-emerald-950'}`}
+                className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-extrabold transition ${active ? 'bg-emerald-700 text-white' : 'text-stone-700 hover:bg-emerald-500/10 hover:text-emerald-950'}`}
                 onClick={() => {
                   onChange(option.value);
                   setOpen(false);
@@ -126,11 +126,31 @@ export function SortHeader({
 }) {
   return (
     <th className={thClass}>
-      <button className={`inline-flex w-full items-center justify-between gap-2 bg-transparent p-0 text-left text-xs font-black uppercase tracking-widest ${active ? 'text-emerald-950' : 'text-stone-500'}`} onClick={onSort} type="button">
+      <button className={`inline-flex w-full cursor-pointer items-center justify-between gap-2 bg-transparent p-0 text-left text-xs font-black uppercase tracking-widest ${active ? 'text-emerald-950' : 'text-stone-500'}`} onClick={onSort} type="button">
         <span>{label}</span>
         <b className={active ? 'text-emerald-700' : 'text-emerald-950/45'}>{active ? (direction === 'asc' ? '↑' : '↓') : '↕'}</b>
       </button>
     </th>
+  );
+}
+
+export function SkeletonBlock({ className = '' }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-stone-900/10 ${className}`} />;
+}
+
+export function TableSkeletonRows({ rows = 6, columns }: { rows?: number; columns: number }) {
+  return (
+    <>
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <tr key={rowIndex}>
+          {Array.from({ length: columns }).map((__, columnIndex) => (
+            <td key={columnIndex} className={tdClass}>
+              <SkeletonBlock className={`h-4 ${columnIndex === 0 ? 'w-40' : columnIndex === columns - 1 ? 'w-16' : 'w-24'}`} />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 }
 

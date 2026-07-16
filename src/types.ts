@@ -51,11 +51,26 @@ export type Order = {
   payment_reference?: string;
   razorpay_order_id?: string;
   razorpay_payment_id?: string;
+  courier_name?: string;
+  tracking_number?: string;
+  estimated_delivery_date?: string;
+  admin_notes?: string;
+  status_history?: Array<{
+    id: string;
+    from_status?: string | null;
+    to_status: string;
+    note?: string | null;
+    created_at: string;
+  }>;
   shipping_address?: {
     name?: string;
+    phone?: string;
     address?: string;
     city?: string;
+    state?: string;
+    country?: string;
     postalCode?: string;
+    landmark?: string;
   };
   items?: Array<{
     id: string;

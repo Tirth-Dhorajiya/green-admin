@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, BadgePercent, Boxes, DollarSign, PackagePlus, ShoppingBag, Users } from 'lucide-react';
+import { AlertTriangle, BadgePercent, Boxes, IndianRupee, PackagePlus, ShoppingBag, Users } from 'lucide-react';
 import api from '../api/client';
 import { endpoints } from '../config/apiConfig';
 import { Coupon, Order, Product, Stats } from '../types';
 import type { AdminView } from '../components/Layout';
+import { SkeletonBlock } from '../components/TableTools';
 
 type DashboardData = {
   stats: Stats | null;
@@ -12,7 +13,7 @@ type DashboardData = {
   coupons: Coupon[];
 };
 
-const money = (value: number | string | undefined) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const money = (value: number | string | undefined) => `₹${Number(value || 0).toFixed(2)}`;
 
 export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) => void }) {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -61,7 +62,7 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
   const featuredProducts = products.filter((product) => product.is_featured).length;
 
   const cards = [
-    { label: 'Revenue', value: stats ? money(stats.totalRevenue) : '-', icon: DollarSign },
+    { label: 'Revenue', value: stats ? money(stats.totalRevenue) : '-', icon: IndianRupee },
     { label: 'Orders', value: stats?.totalOrders ?? '-', icon: ShoppingBag },
     { label: 'Products', value: stats?.totalProducts ?? '-', icon: Boxes },
     { label: 'Customers', value: stats?.totalUsers ?? '-', icon: Users },
@@ -76,7 +77,7 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
           <article className="flex items-start justify-between rounded-lg border border-stone-900/10 bg-white p-5 shadow-lg shadow-emerald-950/5 transition hover:-translate-y-0.5 hover:border-emerald-500/35 hover:shadow-xl hover:shadow-emerald-950/10" key={label}>
             <div>
               <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-500">{label}</p>
-              <strong className="text-2xl font-black tracking-tight text-stone-900">{loading ? '-' : value}</strong>
+              {loading ? <SkeletonBlock className="h-8 w-24" /> : <strong className="text-2xl font-black tracking-tight text-stone-900">{value}</strong>}
             </div>
             <Icon className="box-content rounded-lg bg-emerald-500/10 p-2 text-emerald-600" size={26} />
           </article>
@@ -92,17 +93,17 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
             </div>
           </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <button className="grid min-h-32 content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('products')}>
+            <button className="grid min-h-32 cursor-pointer content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('products')}>
               <PackagePlus size={22} />
               <span className="text-sm font-bold text-stone-500">Add or edit products</span>
               <strong className="text-lg font-black text-emerald-950">{featuredProducts} featured</strong>
             </button>
-            <button className="grid min-h-32 content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('orders')}>
+            <button className="grid min-h-32 cursor-pointer content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('orders')}>
               <ShoppingBag size={22} />
               <span className="text-sm font-bold text-stone-500">Review orders</span>
               <strong className="text-lg font-black text-emerald-950">{pendingOrders} active</strong>
             </button>
-            <button className="grid min-h-32 content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('coupons')}>
+            <button className="grid min-h-32 cursor-pointer content-between justify-items-start gap-3 rounded-lg border border-emerald-500/15 bg-gradient-to-b from-white to-emerald-500/5 p-4 text-left text-stone-900 transition hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-950/5" onClick={() => onViewChange('coupons')}>
               <BadgePercent size={22} />
               <span className="text-sm font-bold text-stone-500">Manage coupons</span>
               <strong className="text-lg font-black text-emerald-950">{activeCoupons} active</strong>
@@ -116,9 +117,13 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
               <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Inventory</p>
               <h2 className="m-0 text-xl font-black tracking-tight">Low stock</h2>
             </div>
-            <button className="bg-transparent p-0 text-sm font-extrabold text-emerald-700" onClick={() => onViewChange('products')}>View all</button>
+            <button className="cursor-pointer bg-transparent p-0 text-sm font-extrabold text-emerald-700" onClick={() => onViewChange('products')}>View all</button>
           </div>
-          {lowStockProducts.length ? (
+          {loading ? (
+            <div className="grid gap-2.5">
+              {[1, 2, 3].map((item) => <SkeletonBlock key={item} className="h-16" />)}
+            </div>
+          ) : lowStockProducts.length ? (
             <div className="grid gap-2.5">
               {lowStockProducts.map((product) => (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-stone-900/10 p-3" key={product.id}>
@@ -146,9 +151,13 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
               <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Recent</p>
               <h2 className="m-0 text-xl font-black tracking-tight">Latest orders</h2>
             </div>
-            <button className="bg-transparent p-0 text-sm font-extrabold text-emerald-700" onClick={() => onViewChange('orders')}>Open orders</button>
+            <button className="cursor-pointer bg-transparent p-0 text-sm font-extrabold text-emerald-700" onClick={() => onViewChange('orders')}>Open orders</button>
           </div>
-          {orders.length ? (
+          {loading ? (
+            <div className="grid gap-2.5">
+              {[1, 2, 3].map((item) => <SkeletonBlock key={item} className="h-16" />)}
+            </div>
+          ) : orders.length ? (
             <div className="grid gap-2.5">
               {orders.slice(0, 5).map((order) => (
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-stone-900/10 p-3" key={order.id}>
@@ -176,6 +185,9 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
             </div>
           </div>
           <div className="grid gap-2.5">
+            {loading && [1, 2, 3, 4].map((item) => <SkeletonBlock key={item} className="h-12" />)}
+            {!loading && (
+            <>
             {[
               ['Add product catalog', products.length],
               ['Mark featured products', featuredProducts],
@@ -186,6 +198,8 @@ export function Dashboard({ onViewChange }: { onViewChange: (view: AdminView) =>
                 {label}
               </span>
             ))}
+            </>
+            )}
           </div>
         </div>
       </section>

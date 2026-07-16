@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Eye, X } from 'lucide-react';
 import api from '../api/client';
-import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
+import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableSkeletonRows, TableToolbar, tdClass, thClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { CustomerDetails, User } from '../types';
 
-const money = (value: string | number | undefined) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const money = (value: string | number | undefined) => `₹${Number(value || 0).toFixed(2)}`;
 const dateTime = (value: string | null | undefined) => value ? new Date(value).toLocaleString() : '-';
 
 const statusBadge = (value: string) => {
@@ -217,22 +217,33 @@ export function Customers() {
   const [totalPages, setTotalPages] = useState(1);
   const [details, setDetails] = useState<CustomerDetails | null>(null);
   const [detailsLoadingId, setDetailsLoadingId] = useState<string | null>(null);
+  const [loadingCustomers, setLoadingCustomers] = useState(true);
 
   useEffect(() => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      sortBy: sortKey === 'joined' ? 'created_at' : sortKey,
-      order: sortDirection,
-    });
-    if (query) params.set('search', query);
-    if (roleFilter !== 'all') params.set('role', roleFilter);
+    const loadCustomers = async () => {
+      try {
+        setLoadingCustomers(true);
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(limit),
+          sortBy: sortKey === 'joined' ? 'created_at' : sortKey,
+          order: sortDirection,
+        });
+        if (query) params.set('search', query);
+        if (roleFilter !== 'all') params.set('role', roleFilter);
 
-    api.get(`${endpoints.admin.customers}?${params.toString()}`).then((res) => {
-      setCustomers(res.data.customers);
-      setTotalCount(res.data.totalCount || 0);
-      setTotalPages(res.data.totalPages || 1);
-    });
+        const res = await api.get(`${endpoints.admin.customers}?${params.toString()}`);
+        setCustomers(res.data.customers);
+        setTotalCount(res.data.totalCount || 0);
+        setTotalPages(res.data.totalPages || 1);
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Unable to load customers');
+      } finally {
+        setLoadingCustomers(false);
+      }
+    };
+
+    loadCustomers();
   }, [page, limit, sortKey, sortDirection, query, roleFilter]);
 
   const openDetails = async (customer: User) => {
@@ -286,7 +297,9 @@ export function Customers() {
             </tr>
           </thead>
           <tbody>
-            {customers.map((customer) => (
+            {loadingCustomers ? (
+              <TableSkeletonRows rows={limit} columns={5} />
+            ) : customers.map((customer) => (
               <tr key={customer.id}>
                 <td className={tdClass}>{customer.name}</td>
                 <td className={tdClass}>{customer.email}</td>
@@ -299,7 +312,7 @@ export function Customers() {
                 </td>
               </tr>
             ))}
-            {!customers.length && (
+            {!loadingCustomers && !customers.length && (
               <tr>
                 <td colSpan={5} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No customers match the current filters.</td>
               </tr>

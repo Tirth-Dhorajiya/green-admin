@@ -23,5 +23,6 @@ export const endpoints = {
   },
   orders: {
     status: (id: string) => `/orders/${id}/status`,
+    refund: (id: string) => `/orders/${id}/refund`,
   },
 };

@@ -11,6 +11,7 @@ import {
   panelClass,
   primaryButtonClass,
   secondaryButtonClass,
+  TableSkeletonRows,
   SortDirection,
   SortHeader,
   tableClass,
@@ -20,6 +21,7 @@ import {
 } from '../components/TableTools';
 import { endpoints, ASSET_BASE_URL } from '../config/apiConfig';
 import { Product, ProductImage } from '../types';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 const categories = ['plants', 'seeds', 'tools', 'planters', 'other'];
 const categoryOptions = categories.map((category) => ({ value: category, label: category }));
@@ -142,25 +144,34 @@ export function Products() {
   const [limit, setLimit] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const loadProducts = useCallback(async () => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      sortBy: sortKey === 'featured' ? 'is_featured' : sortKey,
-      order: sortDirection,
-    });
-    if (query) params.set('search', query);
-    if (categoryFilter !== 'all') params.set('category', categoryFilter);
-    if (featuredFilter !== 'all') params.set('featured', featuredFilter === 'featured' ? 'true' : 'false');
-    if (stockFilter === 'available') params.set('stockStatus', 'in_stock');
-    if (stockFilter === 'low') params.set('stockStatus', 'low_stock');
-    if (stockFilter === 'out') params.set('stockStatus', 'out_of_stock');
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortBy: sortKey === 'featured' ? 'is_featured' : sortKey,
+        order: sortDirection,
+      });
+      if (query) params.set('search', query);
+      if (categoryFilter !== 'all') params.set('category', categoryFilter);
+      if (featuredFilter !== 'all') params.set('featured', featuredFilter === 'featured' ? 'true' : 'false');
+      if (stockFilter === 'available') params.set('stockStatus', 'in_stock');
+      if (stockFilter === 'low') params.set('stockStatus', 'low_stock');
+      if (stockFilter === 'out') params.set('stockStatus', 'out_of_stock');
 
-    const res = await api.get(`${endpoints.products.list}?${params.toString()}`);
-    setProducts(res.data.products);
-    setTotalCount(res.data.totalCount || 0);
-    setTotalPages(res.data.totalPages || 1);
+      const res = await api.get(`${endpoints.products.list}?${params.toString()}`);
+      setProducts(res.data.products);
+      setTotalCount(res.data.totalCount || 0);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to load products');
+    } finally {
+      setLoading(false);
+    }
   }, [page, limit, sortKey, sortDirection, query, categoryFilter, stockFilter, featuredFilter]);
 
   useEffect(() => {
@@ -174,7 +185,6 @@ export function Products() {
   };
 
   const deleteProduct = async (product: Product) => {
-    if (!window.confirm(`Delete ${product.name}?`)) return;
     await api.delete(endpoints.products.detail(product.id));
     toast.success('Product deleted');
     loadProducts();
@@ -250,7 +260,9 @@ export function Products() {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
+            {loading ? (
+              <TableSkeletonRows rows={limit} columns={6} />
+            ) : products.map((product) => (
               <tr key={product.id}>
                 <td className={tdClass}>
                   <div className="flex min-w-56 items-center gap-3">
@@ -259,18 +271,18 @@ export function Products() {
                   </div>
                 </td>
                 <td className={tdClass}>{product.category}</td>
-                <td className={tdClass}>Rs. {parseFloat(product.price).toFixed(2)}</td>
+                <td className={tdClass}>₹{parseFloat(product.price).toFixed(2)}</td>
                 <td className={tdClass}>{product.stock}</td>
                 <td className={tdClass}><button className={product.is_featured ? `${iconButtonClass} bg-amber-100 text-amber-700 hover:bg-amber-500` : iconButtonClass} onClick={() => toggleFeatured(product)}><Star size={16} /></button></td>
                 <td className={tdClass}>
                   <div className="flex gap-2">
                     <button className={iconButtonClass} onClick={() => { setEditingProduct(product); setFormMode('form'); }}><Edit size={16} /></button>
-                    <button className={dangerIconButtonClass} onClick={() => deleteProduct(product)}><Trash2 size={16} /></button>
+                    <button className={dangerIconButtonClass} onClick={() => setProductToDelete(product)}><Trash2 size={16} /></button>
                   </div>
                 </td>
               </tr>
             ))}
-            {!products.length && (
+            {!loading && !products.length && (
               <tr>
                 <td colSpan={6} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No products match the current filters.</td>
               </tr>
@@ -279,6 +291,17 @@ export function Products() {
         </table>
       </div>
       <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
+      <ConfirmationModal
+        open={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={async () => {
+          if (productToDelete) await deleteProduct(productToDelete);
+        }}
+        title="Delete product?"
+        message={productToDelete ? `This will permanently delete "${productToDelete.name}" from the catalog.` : 'This product will be permanently deleted.'}
+        confirmText="Delete"
+        variant="danger"
+      />
     </section>
   );
 }

@@ -2,9 +2,10 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Edit, Plus, Save } from 'lucide-react';
 import api from '../api/client';
-import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, primaryButtonClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
+import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, primaryButtonClass, secondaryButtonClass, SortDirection, SortHeader, tableClass, TableSkeletonRows, TableToolbar, tdClass, thClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { Coupon } from '../types';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 const emptyForm = {
   code: '',
@@ -121,21 +122,30 @@ export function Coupons() {
   const [limit, setLimit] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [couponToToggle, setCouponToToggle] = useState<Coupon | null>(null);
 
   const loadCoupons = useCallback(async () => {
-    const params = new URLSearchParams({
-      page: String(page),
-      limit: String(limit),
-      sortBy: sortKey === 'discount' ? 'discount_value' : sortKey === 'minimum' ? 'min_order_amount' : sortKey === 'usage' ? 'used_count' : sortKey === 'status' ? 'is_active' : sortKey === 'expires' ? 'expires_at' : sortKey,
-      order: sortDirection,
-    });
-    if (query) params.set('search', query);
-    if (statusFilter !== 'all') params.set('status', statusFilter);
-    if (typeFilter !== 'all') params.set('type', typeFilter);
-    const res = await api.get(`${endpoints.admin.coupons}?${params.toString()}`);
-    setCoupons(res.data.coupons);
-    setTotalCount(res.data.totalCount || 0);
-    setTotalPages(res.data.totalPages || 1);
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sortBy: sortKey === 'discount' ? 'discount_value' : sortKey === 'minimum' ? 'min_order_amount' : sortKey === 'usage' ? 'used_count' : sortKey === 'status' ? 'is_active' : sortKey === 'expires' ? 'expires_at' : sortKey,
+        order: sortDirection,
+      });
+      if (query) params.set('search', query);
+      if (statusFilter !== 'all') params.set('status', statusFilter);
+      if (typeFilter !== 'all') params.set('type', typeFilter);
+      const res = await api.get(`${endpoints.admin.coupons}?${params.toString()}`);
+      setCoupons(res.data.coupons);
+      setTotalCount(res.data.totalCount || 0);
+      setTotalPages(res.data.totalPages || 1);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to load coupons');
+    } finally {
+      setLoading(false);
+    }
   }, [page, limit, sortKey, sortDirection, query, statusFilter, typeFilter]);
 
   useEffect(() => {
@@ -214,18 +224,20 @@ export function Coupons() {
             </tr>
           </thead>
           <tbody>
-            {coupons.map((coupon) => (
+            {loading ? (
+              <TableSkeletonRows rows={limit} columns={7} />
+            ) : coupons.map((coupon) => (
               <tr key={coupon.id}>
                 <td className={tdClass}><strong>{coupon.code}</strong><span className="mt-1 block text-xs text-stone-500">{coupon.description || '-'}</span></td>
-                <td className={tdClass}>{coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `Rs. ${Number(coupon.discount_value).toFixed(2)}`}</td>
-                <td className={tdClass}>Rs. {Number(coupon.min_order_amount || 0).toFixed(2)}</td>
+                <td className={tdClass}>{coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `₹${Number(coupon.discount_value).toFixed(2)}`}</td>
+                <td className={tdClass}>₹{Number(coupon.min_order_amount || 0).toFixed(2)}</td>
                 <td className={tdClass}>{coupon.used_count}{coupon.usage_limit ? ` / ${coupon.usage_limit}` : ''}</td>
-                <td className={tdClass}><button className={`rounded-lg px-2 py-1 text-xs font-extrabold ${coupon.is_active ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`} onClick={() => toggleActive(coupon)}>{coupon.is_active ? 'Active' : 'Disabled'}</button></td>
+                <td className={tdClass}><button className={`rounded-lg px-2 py-1 text-xs font-extrabold ${coupon.is_active ? 'bg-emerald-700 text-white' : 'bg-stone-100 text-stone-600'}`} onClick={() => setCouponToToggle(coupon)}>{coupon.is_active ? 'Active' : 'Disabled'}</button></td>
                 <td className={tdClass}>{coupon.expires_at ? new Date(coupon.expires_at).toLocaleDateString() : '-'}</td>
                 <td className={tdClass}><button className={iconButtonClass} onClick={() => { setEditingCoupon(coupon); setFormMode('form'); }}><Edit size={16} /></button></td>
               </tr>
             ))}
-            {!coupons.length && (
+            {!loading && !coupons.length && (
               <tr>
                 <td colSpan={7} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No coupons match the current filters.</td>
               </tr>
@@ -234,6 +246,17 @@ export function Coupons() {
         </table>
       </div>
       <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={limit} onPageChange={setPage} onPageSizeChange={(value) => { setLimit(value); setPage(1); }} />
+      <ConfirmationModal
+        open={!!couponToToggle}
+        onClose={() => setCouponToToggle(null)}
+        onConfirm={async () => {
+          if (couponToToggle) await toggleActive(couponToToggle);
+        }}
+        title={couponToToggle?.is_active ? 'Disable coupon?' : 'Enable coupon?'}
+        message={couponToToggle?.is_active ? `Customers will no longer be able to use "${couponToToggle.code}".` : `Customers will be able to use "${couponToToggle?.code}" again if it is valid.`}
+        confirmText={couponToToggle?.is_active ? 'Disable' : 'Enable'}
+        variant={couponToToggle?.is_active ? 'warning' : 'info'}
+      />
     </section>
   );
 }

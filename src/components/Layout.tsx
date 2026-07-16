@@ -1,5 +1,7 @@
 import { BadgePercent, BarChart3, Boxes, MessageSquare, Settings, ShoppingBag, Star, Users } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { ConfirmationModal } from './ConfirmationModal';
 
 export type AdminView = 'dashboard' | 'products' | 'orders' | 'customers' | 'reviews' | 'coupons' | 'settings';
 
@@ -23,6 +25,7 @@ export function Layout({
   children: React.ReactNode;
 }) {
   const { user, logout } = useAuth();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(6,78,59,0.12),transparent_32rem)] text-stone-900 lg:grid lg:grid-cols-[272px_1fr]">
@@ -52,11 +55,20 @@ export function Layout({
           </div>
           <div className="flex items-center justify-between gap-3 text-sm font-bold text-stone-500 lg:justify-end">
             <span>{user?.name}</span>
-            <button className="rounded-lg bg-emerald-500/10 px-4 py-2.5 font-extrabold text-emerald-950 transition hover:bg-emerald-500/20" onClick={logout}>Logout</button>
+            <button className="cursor-pointer rounded-lg bg-emerald-500/10 px-4 py-2.5 font-extrabold text-emerald-950 transition hover:bg-emerald-500/20" onClick={() => setLogoutOpen(true)}>Logout</button>
           </div>
         </header>
         {children}
       </main>
+      <ConfirmationModal
+        open={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        onConfirm={logout}
+        title="Logout?"
+        message="You will need to sign in again before managing the admin panel."
+        confirmText="Logout"
+        variant="warning"
+      />
     </div>
   );
 }
