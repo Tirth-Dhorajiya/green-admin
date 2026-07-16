@@ -1,11 +1,160 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Eye, X } from 'lucide-react';
 import api from '../api/client';
-import { inputClass, PageSizeSelect, Pagination, panelClass, selectClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass } from '../components/TableTools';
+import { iconButtonClass, inputClass, PageSizeSelect, Pagination, panelClass, secondaryButtonClass, selectClass, SortDirection, SortHeader, tableClass, TableToolbar, tdClass, thClass } from '../components/TableTools';
 import { endpoints } from '../config/apiConfig';
 import { Order } from '../types';
 
 const orderStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+const money = (value: string | number | undefined) => `Rs. ${Number(value || 0).toFixed(2)}`;
+const dateTime = (value: string | undefined) => value ? new Date(value).toLocaleString() : '-';
+const statusBadge = (value: string) => {
+  const tone = value === 'delivered' || value === 'paid'
+    ? 'bg-emerald-100 text-emerald-800'
+    : value === 'cancelled' || value === 'failed'
+      ? 'bg-red-100 text-red-800'
+      : 'bg-amber-100 text-amber-800';
+  return `inline-flex rounded-full px-2.5 py-1 text-xs font-black uppercase tracking-wide ${tone}`;
+};
+
+function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-stone-900/10 py-2 last:border-b-0">
+      <span className="text-sm font-bold text-stone-500">{label}</span>
+      <strong className="max-w-[65%] break-words text-right text-sm text-stone-900">{value || '-'}</strong>
+    </div>
+  );
+}
+
+function OrderDetailsModal({
+  order,
+  onClose,
+  onStatusChange,
+}: {
+  order: Order;
+  onClose: () => void;
+  onStatusChange: (id: string, status: string) => void;
+}) {
+  const subtotal = order.subtotal_price || order.total_price;
+  const discount = Number(order.discount_amount || 0);
+
+  return (
+    <div className="fixed inset-0 z-30 flex justify-end bg-stone-950/55 p-0 sm:p-4" role="dialog" aria-modal="true">
+      <div className="h-full w-full overflow-y-auto bg-stone-50 shadow-2xl sm:max-w-5xl sm:rounded-xl">
+        <header className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-stone-900/10 bg-stone-50/95 p-5 backdrop-blur">
+          <div>
+            <p className="mb-1 text-xs font-extrabold uppercase tracking-widest text-emerald-700">Order details</p>
+            <h2 className="m-0 text-2xl font-black tracking-tight text-stone-900">#{order.id.slice(0, 8)}</h2>
+            <p className="mt-1 text-sm font-bold text-stone-500">{dateTime(order.created_at)}</p>
+          </div>
+          <button className={secondaryButtonClass} onClick={onClose}>
+            <X size={18} /> Close
+          </button>
+        </header>
+
+        <div className="grid gap-5 p-5">
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            <article className="rounded-lg border border-stone-900/10 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-500">Final total</p>
+              <strong className="text-2xl font-black text-emerald-950">{money(order.total_price)}</strong>
+            </article>
+            <article className="rounded-lg border border-stone-900/10 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-500">Order status</p>
+              <span className={statusBadge(order.status)}>{order.status}</span>
+            </article>
+            <article className="rounded-lg border border-stone-900/10 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-500">Payment</p>
+              <span className={statusBadge(order.payment_status)}>{order.payment_status}</span>
+            </article>
+            <article className="rounded-lg border border-stone-900/10 bg-white p-4 shadow-sm">
+              <p className="mb-2 text-xs font-extrabold uppercase tracking-widest text-stone-500">Coupon</p>
+              <strong className="text-lg font-black text-stone-900">{order.coupon_code || 'None'}</strong>
+            </article>
+          </section>
+
+          <section className="grid grid-cols-1 gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <h3 className="m-0 text-xl font-black tracking-tight">Items</h3>
+                <span className="text-sm font-extrabold text-stone-500">{order.items?.length || 0} line items</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[620px] border-collapse">
+                  <thead>
+                    <tr>
+                      <th className={thClass}>Product</th>
+                      <th className={thClass}>Qty</th>
+                      <th className={thClass}>Unit price</th>
+                      <th className={thClass}>Line total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(order.items || []).map((item) => (
+                      <tr key={item.id}>
+                        <td className={tdClass}>{item.product_name}</td>
+                        <td className={tdClass}>{item.quantity}</td>
+                        <td className={tdClass}>{money(item.price)}</td>
+                        <td className={tdClass}>{money(Number(item.price) * item.quantity)}</td>
+                      </tr>
+                    ))}
+                    {!order.items?.length && (
+                      <tr>
+                        <td className={`${tdClass} py-7 text-center font-extrabold text-stone-500`} colSpan={4}>No items found for this order.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="grid gap-5">
+              <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+                <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Amount breakdown</h3>
+                <InfoRow label="Subtotal" value={money(subtotal)} />
+                <InfoRow label="Coupon code" value={order.coupon_code || '-'} />
+                <InfoRow label="Discount" value={discount ? `-${money(discount)}` : money(0)} />
+                <InfoRow label="Final total" value={money(order.total_price)} />
+              </div>
+
+              <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+                <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Status control</h3>
+                <select className={selectClass} value={order.status} onChange={(event) => onStatusChange(order.id, event.target.value)}>
+                  {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Customer</h3>
+              <InfoRow label="Name" value={order.user_name} />
+              <InfoRow label="Email" value={order.user_email} />
+            </div>
+
+            <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Shipping address</h3>
+              <InfoRow label="Name" value={order.shipping_address?.name || order.user_name} />
+              <InfoRow label="Address" value={order.shipping_address?.address} />
+              <InfoRow label="City" value={order.shipping_address?.city} />
+              <InfoRow label="Postal code" value={order.shipping_address?.postalCode} />
+            </div>
+
+            <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Payment details</h3>
+              <InfoRow label="Provider" value={order.payment_provider} />
+              <InfoRow label="Reference" value={order.payment_reference} />
+              <InfoRow label="Razorpay order" value={order.razorpay_order_id} />
+              <InfoRow label="Razorpay payment" value={order.razorpay_payment_id} />
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -88,6 +237,7 @@ export function Orders() {
               <SortHeader label="Payment" active={sortKey === 'payment'} direction={sortDirection} onSort={() => updateSort('payment')} />
               <SortHeader label="Coupon" active={sortKey === 'coupon'} direction={sortDirection} onSort={() => updateSort('coupon')} />
               <SortHeader label="Status" active={sortKey === 'status'} direction={sortDirection} onSort={() => updateSort('status')} />
+              <th className={thClass}>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -114,39 +264,30 @@ export function Orders() {
                       {orderStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
                     </select>
                   </td>
+                  <td className={tdClass}>
+                    <button className={iconButtonClass} title="View order details" onClick={() => setExpandedOrderId(order.id)}>
+                      <Eye size={16} />
+                    </button>
+                  </td>
                 </tr>
-                {expandedOrderId === order.id && (
-                  <tr>
-                    <td className={tdClass} colSpan={6}>
-                      <div className="grid grid-cols-1 gap-5 rounded-lg border border-emerald-500/15 bg-emerald-500/5 p-4 md:grid-cols-2">
-                        <div>
-                          <h3 className="mb-2 font-black">Shipping</h3>
-                          <p className="my-1 text-sm text-stone-600">{order.shipping_address?.name || order.user_name}</p>
-                          <p className="my-1 text-sm text-stone-600">{order.shipping_address?.address || '-'}</p>
-                          <p className="my-1 text-sm text-stone-600">{[order.shipping_address?.city, order.shipping_address?.postalCode].filter(Boolean).join(' ') || '-'}</p>
-                          <p className="my-1 text-sm text-stone-600">Payment ref: {order.payment_reference || '-'}</p>
-                        </div>
-                        <div>
-                          <h3 className="mb-2 font-black">Items</h3>
-                          {(order.items || []).map((item) => (
-                            <p className="my-1 text-sm text-stone-600" key={item.id}>{item.quantity} x {item.product_name} at Rs. {parseFloat(item.price).toFixed(2)}</p>
-                          ))}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
               </Fragment>
             ))}
             {!orders.length && (
               <tr>
-                <td colSpan={6} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No orders match the current filters.</td>
+                <td colSpan={7} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No orders match the current filters.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
       <Pagination page={page} totalPages={totalPages} totalCount={totalCount} onPageChange={setPage} />
+      {expandedOrderId && (
+        <OrderDetailsModal
+          order={orders.find((order) => order.id === expandedOrderId)!}
+          onClose={() => setExpandedOrderId(null)}
+          onStatusChange={updateStatus}
+        />
+      )}
     </section>
   );
 }

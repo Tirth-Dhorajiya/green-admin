@@ -39,6 +39,8 @@ export type Order = {
   payment_status: string;
   payment_provider?: string;
   payment_reference?: string;
+  razorpay_order_id?: string;
+  razorpay_payment_id?: string;
   shipping_address?: {
     name?: string;
     address?: string;
