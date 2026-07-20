@@ -6,6 +6,7 @@ import { BrandedSelect, iconButtonClass, inputClass, Pagination, panelClass, sec
 import { endpoints } from '../config/apiConfig';
 import { Order } from '../types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { DelhiveryFulfillment, DelhiveryPickupScheduler } from '../components/DelhiveryFulfillment';
 
 const orderStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 const orderStatusOptions = orderStatuses.map((status) => ({ value: status, label: status }));
@@ -35,19 +36,18 @@ function OrderDetailsModal({
   onClose,
   onOrderUpdate,
   onRefund,
+  onReload,
 }: {
   order: Order;
   onClose: () => void;
   onOrderUpdate: (id: string, payload: Record<string, string>) => void;
   onRefund: (order: Order) => void;
+  onReload: () => Promise<void>;
 }) {
   const subtotal = order.subtotal_price || order.total_price;
   const discount = Number(order.discount_amount || 0);
   const [fulfillment, setFulfillment] = useState({
     status: order.status,
-    courier_name: order.courier_name || '',
-    tracking_number: order.tracking_number || '',
-    estimated_delivery_date: order.estimated_delivery_date ? order.estimated_delivery_date.slice(0, 10) : '',
     admin_notes: order.admin_notes || '',
     note: '',
   });
@@ -134,9 +134,6 @@ function OrderDetailsModal({
                 <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Status control</h3>
                 <div className="grid gap-3">
                   <BrandedSelect value={fulfillment.status} onChange={(value) => setFulfillment((current) => ({ ...current, status: value }))} options={orderStatusOptions} />
-                  <input className={inputClass} placeholder="Courier name" value={fulfillment.courier_name} onChange={(event) => setFulfillment((current) => ({ ...current, courier_name: event.target.value }))} />
-                  <input className={inputClass} placeholder="Tracking number" value={fulfillment.tracking_number} onChange={(event) => setFulfillment((current) => ({ ...current, tracking_number: event.target.value }))} />
-                  <input className={inputClass} type="date" value={fulfillment.estimated_delivery_date} onChange={(event) => setFulfillment((current) => ({ ...current, estimated_delivery_date: event.target.value }))} />
                   <textarea className={`${inputClass} min-h-24 resize-y`} placeholder="Internal admin notes" value={fulfillment.admin_notes} onChange={(event) => setFulfillment((current) => ({ ...current, admin_notes: event.target.value }))} />
                   <input className={inputClass} placeholder="Customer status note" value={fulfillment.note} onChange={(event) => setFulfillment((current) => ({ ...current, note: event.target.value }))} />
                   <button className={secondaryButtonClass} onClick={() => onOrderUpdate(order.id, fulfillment)}>
@@ -146,6 +143,8 @@ function OrderDetailsModal({
               </div>
             </div>
           </section>
+
+          <DelhiveryFulfillment order={order} onChanged={onReload} />
 
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
@@ -296,6 +295,7 @@ export function Orders() {
 
   return (
     <section className={panelClass}>
+      <DelhiveryPickupScheduler />
       <TableToolbar>
         <input className={inputClass} placeholder="Search orders" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />
         <BrandedSelect
@@ -386,6 +386,7 @@ export function Orders() {
             if (order) requestOrderUpdate(order, payload);
           }}
           onRefund={setRefundTarget}
+          onReload={loadOrders}
         />
       )}
       <ConfirmationModal

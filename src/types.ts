@@ -37,6 +37,48 @@ export type Product = {
   is_featured: boolean;
 };
 
+export type ShipmentEvent = {
+  id: string;
+  status: string;
+  status_code?: string;
+  status_type?: string;
+  location?: string;
+  instructions?: string;
+  occurred_at: string;
+};
+
+export type ShipmentPackage = {
+  id: string;
+  sequence: number;
+  waybill?: string;
+  weight_grams: string;
+  length_cm: string;
+  width_cm: string;
+  height_cm: string;
+  contents: string;
+  status: string;
+  status_description?: string;
+  status_location?: string;
+  estimated_delivery_date?: string;
+  last_event_at?: string;
+  events?: ShipmentEvent[];
+};
+
+export type Shipment = {
+  id: string;
+  provider: string;
+  provider_reference: string;
+  provider_upload_id?: string;
+  pickup_location: string;
+  ewaybill_number?: string;
+  status: string;
+  failure_message?: string;
+  manifested_at?: string;
+  last_synced_at?: string;
+  packages: ShipmentPackage[];
+  created_at: string;
+};
+
 export type Order = {
   id: string;
   user_name: string;
@@ -55,6 +97,7 @@ export type Order = {
   tracking_number?: string;
   estimated_delivery_date?: string;
   admin_notes?: string;
+  shipments?: Shipment[];
   status_history?: Array<{
     id: string;
     from_status?: string | null;
