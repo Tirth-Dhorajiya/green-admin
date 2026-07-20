@@ -146,6 +146,8 @@ function OrderDetailsModal({
 
           <DelhiveryFulfillment order={order} onChanged={onReload} />
 
+          {!!order.refunds?.length && <section className="rounded-lg border border-amber-200 bg-amber-50 p-5"><h3 className="mb-3 mt-0 text-xl font-black">Payment refunds</h3><div className="grid gap-2">{order.refunds.map((refund) => <div key={refund.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3 text-sm"><div><strong>{money(Number(refund.amount_paise) / 100)}</strong><p className="m-0 text-xs font-bold text-stone-500">{refund.razorpay_refund_id || refund.receipt}{refund.arn ? ` · ARN ${refund.arn}` : ''}</p></div><span className={statusBadge(refund.status)}>{refund.status}</span></div>)}</div></section>}
+
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div className="rounded-lg border border-stone-900/10 bg-white p-5 shadow-sm">
               <h3 className="mb-3 mt-0 text-xl font-black tracking-tight">Customer</h3>
@@ -195,9 +197,9 @@ function OrderDetailsModal({
           {order.status === 'cancelled' && order.payment_status === 'paid' && (
             <section className="rounded-lg border border-red-200 bg-red-50 p-5 shadow-sm">
               <h3 className="mb-2 mt-0 text-xl font-black tracking-tight text-red-900">Refund required</h3>
-              <p className="mb-4 text-sm font-bold text-red-700">This paid order is cancelled. Mark it refunded after processing the refund.</p>
+              <p className="mb-4 text-sm font-bold text-red-700">This paid order is cancelled. This action sends a real full refund to Razorpay.</p>
               <button className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-red-600/20 transition hover:bg-red-700" onClick={() => onRefund(order)}>
-                Mark refunded
+                Initiate full refund
               </button>
             </section>
           )}
@@ -274,11 +276,11 @@ export function Orders() {
     if (!refundTarget) return;
     try {
       await api.put(endpoints.orders.refund(refundTarget.id), { note: 'Refund processed by admin' });
-      toast.success('Order marked refunded');
+      toast.success('Razorpay refund initiated');
       await loadOrders();
       setExpandedOrderId(null);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Unable to mark refunded');
+      toast.error(error.response?.data?.message || 'Unable to initiate refund');
     } finally {
       setRefundTarget(null);
     }
@@ -311,6 +313,9 @@ export function Orders() {
             { value: 'pending', label: 'Pending' },
             { value: 'paid', label: 'Paid' },
             { value: 'failed', label: 'Failed' },
+            { value: 'refund_pending', label: 'Refund pending' },
+            { value: 'partially_refunded', label: 'Partially refunded' },
+            { value: 'refunded', label: 'Refunded' },
           ]}
         />
         <BrandedSelect
@@ -404,9 +409,9 @@ export function Orders() {
         open={!!refundTarget}
         onClose={() => setRefundTarget(null)}
         onConfirm={markRefunded}
-        title="Mark refunded?"
-        message={refundTarget ? `Order #${refundTarget.id.slice(0, 8)} payment status will change to refunded.` : 'This payment will be marked refunded.'}
-        confirmText="Mark refunded"
+        title="Initiate full refund?"
+        message={refundTarget ? `A real Razorpay refund for order #${refundTarget.id.slice(0, 8)} will be initiated. This cannot be undone.` : 'A real Razorpay refund will be initiated.'}
+        confirmText="Initiate refund"
         variant="warning"
       />
     </section>

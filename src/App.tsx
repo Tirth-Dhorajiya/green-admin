@@ -9,11 +9,13 @@ import { Dashboard } from './pages/Dashboard';
 import { Orders } from './pages/Orders';
 import { Products } from './pages/Products';
 import { Reviews } from './pages/Reviews';
+import { Returns } from './pages/Returns';
 import { Settings } from './pages/Settings';
 
 function ActivePage({ view, onViewChange }: { view: AdminView; onViewChange: (view: AdminView) => void }) {
   if (view === 'products') return <Products />;
   if (view === 'orders') return <Orders />;
+  if (view === 'returns') return <Returns />;
   if (view === 'customers') return <Customers />;
   if (view === 'reviews') return <Reviews />;
   if (view === 'coupons') return <Coupons />;

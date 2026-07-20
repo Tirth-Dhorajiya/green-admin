@@ -5,6 +5,9 @@ import { BrandedSelect, inputClass, Pagination, panelClass, SortDirection, SortH
 import { endpoints } from '../config/apiConfig';
 import { Review } from '../types';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { Eye, EyeOff, Trash2 } from 'lucide-react';
+
+type ReviewImage = NonNullable<Review['images']>[number];
 
 export function Reviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -19,6 +22,7 @@ export function Reviews() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [reviewToHide, setReviewToHide] = useState<Review | null>(null);
+  const [imageToDelete, setImageToDelete] = useState<{ review: Review; image: ReviewImage } | null>(null);
 
   const loadReviews = useCallback(async () => {
     try {
@@ -61,6 +65,28 @@ export function Reviews() {
     updateReviewStatus(review.id, status);
   };
 
+  const updateImageStatus = async (reviewId: string, image: ReviewImage) => {
+    try {
+      const status = image.status === 'visible' ? 'hidden' : 'visible';
+      await api.put(endpoints.admin.reviewImageStatus(reviewId, image.id), { status });
+      toast.success(status === 'visible' ? 'Review photo is visible' : 'Review photo hidden');
+      await loadReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to update review photo');
+    }
+  };
+
+  const deleteImage = async (reviewId: string, imageId: string) => {
+    try {
+      await api.delete(endpoints.admin.reviewImage(reviewId, imageId));
+      toast.success('Review photo permanently removed');
+      await loadReviews();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to remove review photo');
+      throw error;
+    }
+  };
+
   const updateSort = (key: typeof sortKey) => {
     if (sortKey === key) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -100,12 +126,13 @@ export function Reviews() {
               <SortHeader label="Customer" active={sortKey === 'customer'} direction={sortDirection} onSort={() => updateSort('customer')} />
               <SortHeader label="Rating" active={sortKey === 'rating'} direction={sortDirection} onSort={() => updateSort('rating')} />
               <SortHeader label="Comment" active={sortKey === 'comment'} direction={sortDirection} onSort={() => updateSort('comment')} />
+              <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-widest text-stone-500">Photos</th>
               <SortHeader label="Status" active={sortKey === 'status'} direction={sortDirection} onSort={() => updateSort('status')} />
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <TableSkeletonRows rows={limit} columns={5} />
+              <TableSkeletonRows rows={limit} columns={6} />
             ) : reviews.map((review) => (
               <tr key={review.id}>
                 <td className={tdClass}>{review.product_name}</td>
@@ -115,6 +142,39 @@ export function Reviews() {
                 </td>
                 <td className={tdClass}>{review.rating}/5</td>
                 <td className={`${tdClass} max-w-sm whitespace-normal`}>{review.comment || '-'}</td>
+                <td className={tdClass}>
+                  {review.images?.length ? (
+                    <div className="flex min-w-52 flex-wrap gap-2">
+                      {review.images.map((image, index) => (
+                        <div key={image.id} className={`rounded-lg border p-1.5 ${image.status === 'hidden' ? 'border-amber-300 bg-amber-50 opacity-70' : 'border-stone-200 bg-white'}`}>
+                          <a href={image.url} target="_blank" rel="noreferrer" className="block" title={`Open photo ${index + 1}`}>
+                            <img src={image.url} alt={`Review photo ${index + 1}`} className="h-14 w-14 rounded-md object-cover" />
+                          </a>
+                          <div className="mt-1 flex justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => updateImageStatus(review.id, image)}
+                              className="cursor-pointer rounded-md p-1.5 text-stone-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+                              title={image.status === 'visible' ? 'Hide photo' : 'Show photo'}
+                              aria-label={image.status === 'visible' ? `Hide photo ${index + 1}` : `Show photo ${index + 1}`}
+                            >
+                              {image.status === 'visible' ? <EyeOff size={15} /> : <Eye size={15} />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setImageToDelete({ review, image })}
+                              className="cursor-pointer rounded-md p-1.5 text-stone-500 transition hover:bg-red-50 hover:text-red-700"
+                              title="Permanently remove photo"
+                              aria-label={`Permanently remove photo ${index + 1}`}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : <span className="text-stone-400">—</span>}
+                </td>
                 <td className={tdClass}>
                   <BrandedSelect
                     value={review.status}
@@ -129,7 +189,7 @@ export function Reviews() {
             ))}
             {!loading && !reviews.length && (
               <tr>
-                <td colSpan={5} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No reviews match the current filters.</td>
+                <td colSpan={6} className={`${tdClass} py-7 text-center font-extrabold text-stone-500`}>No reviews match the current filters.</td>
               </tr>
             )}
           </tbody>
@@ -146,6 +206,17 @@ export function Reviews() {
         message="This review will be hidden from customers until you make it visible again."
         confirmText="Hide"
         variant="warning"
+      />
+      <ConfirmationModal
+        open={!!imageToDelete}
+        onClose={() => setImageToDelete(null)}
+        onConfirm={async () => {
+          if (imageToDelete) await deleteImage(imageToDelete.review.id, imageToDelete.image.id);
+        }}
+        title="Delete review photo?"
+        message="This permanently removes the photo from Cloudinary and the review. This action cannot be undone."
+        confirmText="Delete photo"
+        variant="danger"
       />
     </section>
   );

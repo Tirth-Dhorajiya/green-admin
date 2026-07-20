@@ -1,14 +1,15 @@
-import { BadgePercent, BarChart3, Boxes, MessageSquare, Settings, ShoppingBag, Star, Users } from 'lucide-react';
+import { BadgePercent, BarChart3, Boxes, MessageSquare, RotateCcw, Settings, ShoppingBag, Star, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { ConfirmationModal } from './ConfirmationModal';
 
-export type AdminView = 'dashboard' | 'products' | 'orders' | 'customers' | 'reviews' | 'coupons' | 'settings';
+export type AdminView = 'dashboard' | 'products' | 'orders' | 'returns' | 'customers' | 'reviews' | 'coupons' | 'settings';
 
 const navItems: Array<{ id: AdminView; label: string; icon: typeof BarChart3 }> = [
   { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
   { id: 'products', label: 'Products', icon: Boxes },
   { id: 'orders', label: 'Orders', icon: ShoppingBag },
+  { id: 'returns', label: 'Returns', icon: RotateCcw },
   { id: 'customers', label: 'Customers', icon: Users },
   { id: 'reviews', label: 'Reviews', icon: MessageSquare },
   { id: 'coupons', label: 'Coupons', icon: BadgePercent },

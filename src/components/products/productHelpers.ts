@@ -17,8 +17,13 @@ export const formatFileSize = (bytes: number) => {
   return `${Math.ceil(bytes / 1024)} KB`;
 };
 
+export const assetImageUrl = (url?: string | null) => {
+  if (!url) return '';
+  return url.startsWith('http') ? url : `${ASSET_BASE_URL}${url}`;
+};
+
 export const productImageUrl = (product: Product) => {
   const url = product.thumbnail_url || product.image_url;
   if (!url) return 'https://images.unsplash.com/photo-1463320726281-696a485928c7?q=80&w=200&auto=format&fit=crop';
-  return url.startsWith('http') ? url : `${ASSET_BASE_URL}${url}`;
+  return assetImageUrl(url);
 };

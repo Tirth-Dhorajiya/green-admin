@@ -35,6 +35,9 @@ export type Product = {
   thumbnail_url?: string;
   images?: ProductImage[];
   is_featured: boolean;
+  return_policy?: 'returnable' | 'damage_only';
+  return_window_hours?: number;
+  final_sale?: boolean;
 };
 
 export type ShipmentEvent = {
@@ -77,6 +80,65 @@ export type Shipment = {
   last_synced_at?: string;
   packages: ShipmentPackage[];
   created_at: string;
+  direction?: 'forward' | 'reverse';
+  purpose?: 'fulfilment' | 'return' | 'replacement';
+  return_request_id?: string;
+};
+
+export type ReturnItem = {
+  id: string;
+  order_item_id: string;
+  product_id: string;
+  product_name: string;
+  category: string;
+  quantity: number;
+  approved_quantity: number;
+  received_quantity: number;
+  accepted_quantity: number;
+  refund_quantity: number;
+  replacement_quantity: number;
+  reason: string;
+  requested_amount_paise: string | number;
+  condition_note?: string;
+  resellable?: boolean;
+  image_url?: string;
+};
+
+export type PaymentRefund = {
+  id: string;
+  razorpay_refund_id?: string;
+  receipt: string;
+  amount_paise: string | number;
+  status: 'creating' | 'pending' | 'processed' | 'failed';
+  failure_message?: string;
+  arn?: string;
+  created_at: string;
+};
+
+export type ReturnRequest = {
+  id: string;
+  request_number: string;
+  order_id: string;
+  user_id: string;
+  customer_name: string;
+  customer_email: string;
+  status: string;
+  preferred_resolution: 'refund' | 'replacement';
+  resolution_type?: string;
+  inspection_status: string;
+  explanation?: string;
+  admin_reason?: string;
+  reverse_required?: boolean;
+  manual_return?: boolean;
+  requested_amount_paise?: string | number;
+  shipping_address?: Order['shipping_address'];
+  items: ReturnItem[];
+  evidence: Array<{ id: string; url: string; kind: string; created_at: string }>;
+  history: Array<{ id: string; from_status?: string; to_status: string; note?: string; created_at: string }>;
+  refunds: PaymentRefund[];
+  shipments: Shipment[];
+  created_at: string;
+  updated_at: string;
 };
 
 export type Order = {
@@ -98,6 +160,8 @@ export type Order = {
   estimated_delivery_date?: string;
   admin_notes?: string;
   shipments?: Shipment[];
+  returns?: ReturnRequest[];
+  refunds?: PaymentRefund[];
   status_history?: Array<{
     id: string;
     from_status?: string | null;
@@ -132,6 +196,12 @@ export type Review = {
   rating: number;
   comment?: string;
   status: 'visible' | 'hidden';
+  images?: Array<{
+    id: string;
+    url: string;
+    sort_order: number;
+    status: 'visible' | 'hidden';
+  }>;
   created_at: string;
 };
 
